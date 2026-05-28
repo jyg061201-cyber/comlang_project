@@ -9,5 +9,5 @@ package mazegame.entity;
  * @author wjddu
  */
 public interface GameObject {
-    
+    char getSymol();
 }
