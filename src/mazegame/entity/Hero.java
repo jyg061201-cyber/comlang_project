@@ -93,4 +93,5 @@ public class Hero implements GameObject {
     public int getMaxHp()         { return maxHp; }
     public Weapon getCurrentWeapon() { return currentWeapon; }
     public boolean hasKey()       { return hasKey; }
+    SystemFileSystem;
 }
