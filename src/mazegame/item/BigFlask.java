@@ -1,6 +1,6 @@
 package mazegame.item;
 
-/** Big Flask: symbol B, restores 12 HP. */
+/** 대형 물약: 기호 B, HP 12 회복. */
 public class BigFlask extends Potion {
     public BigFlask() { super(12); }
 

@@ -1,19 +1,19 @@
 package mazegame.entity;
 
 /**
- * Represents a door cell on the map border.
+ * 맵 경계에 있는 문 셀을 나타낸다.
  *
- * Regular door (d): links to another room's CSV file via targetFilename.
- * Master door (D):  isMaster == true; requires the hero to have the Key.
+ * 일반 문(d): targetFilename으로 다른 방 CSV 파일과 연결된다.
+ * 마스터 문(D): isMaster == true이며, 영웅이 키를 보유해야 통과 가능하다.
  */
 public class Door implements GameObject {
 
-    private final String targetFilename; // e.g. "room2.csv", null for master door
+    private final String targetFilename; // 예: "room2.csv", 마스터 문이면 null
     private final boolean isMaster;
 
     /**
-     * Creates a regular door pointing to another room file.
-     * @param targetFilename the CSV filename read from the cell at runtime
+     * 다른 방 파일로 연결되는 일반 문을 생성한다.
+     * @param targetFilename 런타임에 셀에서 읽어온 CSV 파일명
      */
     public Door(String targetFilename) {
         this.targetFilename = targetFilename;
@@ -21,7 +21,7 @@ public class Door implements GameObject {
     }
 
     /**
-     * Creates a master door (no target file needed).
+     * 마스터 문을 생성한다 (목적지 파일 없음).
      */
     public Door() {
         this.targetFilename = null;

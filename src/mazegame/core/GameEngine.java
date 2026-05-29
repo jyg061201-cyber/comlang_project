@@ -8,23 +8,22 @@ import java.util.List;
 import java.util.Scanner;
 
 /**
- * The central game loop.
+ * 게임의 핵심 루프 클래스.
  *
- * Responsibilities:
- *  - Initialise CSVHandler and load the starting room.
- *  - Accept player input (u/d/r/l for movement, a for attack, q to quit).
- *  - Apply movement rules: item pickup, potion consumption, weapon switching,
- *    door traversal, and combat adjacency.
- *  - Manage room transitions (save current room, load new room).
- *  - Detect win (master door + key) and lose (hero HP = 0) conditions.
+ * 담당 역할:
+ *  - CSVHandler 초기화 및 시작 방 로드.
+ *  - 플레이어 입력 처리 (w/a/s/d 이동, q 종료).
+ *  - 이동 규칙 적용: 아이템 획득, 물약 소비, 무기 교체, 문 이동, 전투.
+ *  - 방 전환 관리 (현재 방 저장 → 새 방 로드).
+ *  - 승리(마스터 문 + 키) 및 패배(영웅 HP = 0) 조건 감지.
  */
 public class GameEngine {
 
     private final CSVHandler csvHandler;
     private final Scanner    scanner;
     private Hero             hero;
-    private Potion           pendingPotion; // potion under the hero when HP was full
-    private Weapon           pendingWeapon; // weapon under the hero when player declined to switch
+    private Potion           pendingPotion; // HP가 꽉 찼을 때 영웅 아래에 깔린 물약
+    private Weapon           pendingWeapon; // 무기 교체를 거절했을 때 영웅 아래에 깔린 무기
     private MapGrid          mapGrid;
     private String           currentFilename;
 
@@ -35,10 +34,10 @@ public class GameEngine {
         mapGrid    = new MapGrid();
     }
 
-    // ── Entry point ───────────────────────────────────────────────────────────
+    // ── 시작 ──────────────────────────────────────────────────────────────────
 
     public void start() {
-        // 1. Create per-run save folder and copy CSV files
+        // 실행별 저장 폴더 생성 및 CSV 파일 복사
         try {
             csvHandler.initSaveFolder();
         } catch (GameException e) {
@@ -47,7 +46,7 @@ public class GameEngine {
             return;
         }
 
-        // 2. Load the starting room
+        // 시작 방 로드
         try {
             loadRoom("start.csv", -1, -1);
         } catch (GameException e) {
@@ -55,59 +54,52 @@ public class GameEngine {
             return;
         }
 
-        // 3. Main game loop
+        // 메인 게임 루프 실행
         gameLoop();
 
         scanner.close();
     }
 
-    // ── Room loading ──────────────────────────────────────────────────────────
+    // ── 방 로드 ───────────────────────────────────────────────────────────────
 
     /**
-     * Loads a room file and (re)initialises the MapGrid.
+     * 방 파일을 로드하고 MapGrid를 (재)초기화한다.
      *
-     * @param filename      the CSV file to load
-     * @param entryDoorRow  row of the door used to enter (-1 if start of game)
-     * @param entryDoorCol  col of the door used to enter (-1 if start of game)
+     * @param filename      로드할 CSV 파일명
+     * @param entryDoorRow  진입한 문의 행 (게임 시작 시 -1)
+     * @param entryDoorCol  진입한 문의 열 (게임 시작 시 -1)
      */
     private void loadRoom(String filename, int entryDoorRow, int entryDoorCol)
             throws GameException {
         currentFilename = filename;
         GameObject[][] rawGrid = csvHandler.loadRoom(filename);
 
-        // Scan for '@' placeholder and note its position
-        int atRow = -1, atCol = -1;
-        for (int r = 0; r < rawGrid.length; r++) {
-            // CSVHandler returns null for '@' cells; we need to record the position
-            // from the raw CSV. Since CSVHandler already set those cells to null,
-            // we can only use it if parsing was split. Instead, we rely on the
-            // initWithHeroAt / init logic.
-            // (The '@' token is intentionally swallowed by CSVHandler into null.)
-        }
-        // Re-scan the file directly to find '@', if needed
-        atRow = findHeroPosition(filename)[0];
-        atCol = findHeroPosition(filename)[1];
+        // CSV 파일에서 '@' 위치를 직접 스캔하여 영웅 초기 위치 파악
+        int atRow = findHeroPosition(filename)[0];
+        int atCol = findHeroPosition(filename)[1];
 
         if (entryDoorRow >= 0) {
+            // 문을 통해 진입: 문 안쪽 칸에 배치
             mapGrid.init(rawGrid, hero, entryDoorRow, entryDoorCol);
         } else if (atRow >= 0) {
+            // CSV에 '@' 표시가 있으면 해당 위치에 배치
             mapGrid.initWithHeroAt(rawGrid, hero, atRow, atCol);
         } else {
+            // '@' 없음: (1,1) 또는 랜덤 빈 칸에 배치
             mapGrid.init(rawGrid, hero);
         }
     }
 
     /**
-     * Scans the save-folder CSV for the '@' token to find the hero's
-     * designated start position.
-     * Returns {-1, -1} if no '@' is present.
+     * 저장 폴더의 CSV 파일에서 '@' 토큰을 찾아 영웅의 지정 시작 위치를 반환한다.
+     * '@'가 없으면 {-1, -1}을 반환한다.
      */
     private int[] findHeroPosition(String filename) {
         String path = csvHandler.getSaveDir()
                       + java.io.File.separator + filename;
         try (java.io.BufferedReader br =
                 new java.io.BufferedReader(new java.io.FileReader(path))) {
-            br.readLine(); // skip header
+            br.readLine(); // 헤더 스킵
             int row = 0;
             String line;
             while ((line = br.readLine()) != null) {
@@ -120,35 +112,35 @@ public class GameEngine {
                 row++;
             }
         } catch (java.io.IOException e) {
-            // fall through – return not-found
+            // 찾지 못함 — fall through
         }
         return new int[]{-1, -1};
     }
 
-    // ── Main loop ─────────────────────────────────────────────────────────────
+    // ── 메인 루프 ─────────────────────────────────────────────────────────────
 
     private void gameLoop() {
         while (true) {
             mapGrid.render(hero);
 
-            // Check adjacency: if monsters are adjacent, show combat menu automatically
+            // 인접 몬스터 확인: 있으면 자동으로 전투 메뉴 표시
             List<int[]> adjMonsters = mapGrid.getAdjacentMonsters();
             if (!adjMonsters.isEmpty()) {
                 boolean attacked = handleCombatTurn(adjMonsters);
-                // Check hero death after combat
+                // 전투 후 영웅 사망 체크
                 if (!hero.isAlive()) {
                     mapGrid.render(hero);
                     System.out.println("You have been defeated. Game over.");
                     break;
                 }
                 if (attacked) {
-                    continue; // re-render after attacking
+                    continue; // 공격 후 다시 렌더링
                 }
-                // Skipped — fall through to movement input this turn
+                // 스킵 — 이번 턴에 이동 입력으로 넘어감
                 System.out.println("You skipped combat. You may move.");
             }
 
-            // Movement turn
+            // 이동 입력 처리
             System.out.print("Enter command (w/a/s/d to move, q to quit): ");
             String input = scanner.nextLine().trim().toLowerCase();
 
@@ -158,16 +150,16 @@ public class GameEngine {
             }
 
             switch (input) {
-                case "w": tryMove(-1,  0); break; // up
-                case "s": tryMove( 1,  0); break; // down
-                case "a": tryMove( 0, -1); break; // left
-                case "d": tryMove( 0,  1); break; // right
+                case "w": tryMove(-1,  0); break; // 위
+                case "s": tryMove( 1,  0); break; // 아래
+                case "a": tryMove( 0, -1); break; // 왼쪽
+                case "d": tryMove( 0,  1); break; // 오른쪽
                 default:
                     System.out.println("Invalid command. Use w/a/s/d to move, q to quit.");
                     break;
             }
 
-            // Check hero death (shouldn't happen without combat, but just in case)
+            // 이동 중 사망 체크 (일반적으로 전투 없이는 발생하지 않지만 안전을 위해)
             if (!hero.isAlive()) {
                 mapGrid.render(hero);
                 System.out.println("You have been defeated. Game over.");
@@ -177,11 +169,12 @@ public class GameEngine {
     }
 
     /**
-     * Combat turn: automatically triggered when hero is adjacent to one or more monsters.
-     * Shows action menu (attack/skip) for each adjacent monster.
+     * 전투 턴: 영웅이 몬스터와 인접할 때 자동으로 호출된다.
+     * 인접한 몬스터 목록을 받아 액션 메뉴(공격/스킵)를 표시한다.
+     * @return 공격을 수행했으면 true, 스킵했으면 false
      */
     private boolean handleCombatTurn(List<int[]> adjMonsters) {
-        // Show all adjacent monsters and their HP
+        // 인접 몬스터 목록과 HP 표시
         System.out.println("-- Nearby monsters --");
         for (int[] pos : adjMonsters) {
             Monster m = (Monster) mapGrid.getCell(pos[0], pos[1]);
@@ -190,7 +183,7 @@ public class GameEngine {
                     + " | Dmg: " + m.getDamage() + "]");
         }
 
-        // If multiple monsters adjacent, ask which to engage
+        // 인접 몬스터가 여러 마리면 대상 선택
         int[] target;
         if (adjMonsters.size() == 1) {
             target = adjMonsters.get(0);
@@ -221,6 +214,7 @@ public class GameEngine {
         System.out.println("-- " + monster.getName()
                 + " [HP: " + monster.getHp() + "/" + monster.getMaxHp() + "] --");
 
+        // f 또는 e가 입력될 때까지 반복
         String action;
         while (true) {
             System.out.print("Action (f = attack, e = skip): ");
@@ -234,13 +228,13 @@ public class GameEngine {
             return false;
         }
 
-        // Hero must be armed to attack
+        // 무기가 없으면 공격 불가
         if (!hero.isArmed()) {
             System.out.println("You have no weapon! You can't attack.");
             return false;
         }
 
-        // Simultaneous damage exchange
+        // 동시 데미지 교환
         int heroAttack    = hero.getWeaponDamage();
         int monsterAttack = monster.getDamage();
         monster.takeDamage(heroAttack);
@@ -251,55 +245,56 @@ public class GameEngine {
         System.out.println(monster.getName() + " dealt " + monsterAttack
                 + " damage to you. (Your HP: " + hero.getHp() + ")");
 
-        // Monster defeated?
+        // 몬스터 처치 확인
         if (monster.isDead()) {
             System.out.println(monster.getName() + " is defeated!");
             if (monster.dropsKey()) {
                 mapGrid.setCell(target[0], target[1], new Key());
                 System.out.println("The Troll dropped the Master Key (*)!");
             } else {
-                mapGrid.setCell(target[0], target[1], null);
+                mapGrid.setCell(target[0], target[1], null); // 몬스터 제거
             }
         }
-        return true; // attack was performed
+        return true; // 공격 수행됨
     }
 
-    // ── Movement ──────────────────────────────────────────────────────────────
+    // ── 이동 ──────────────────────────────────────────────────────────────────
 
     /**
-     * Attempts to move the hero by (dr, dc).
-     * Handles: boundary, monsters blocking, item pickup, door traversal.
-     * @return true if the action was processed (even if movement failed)
+     * 영웅을 (dr, dc) 방향으로 이동 시도한다.
+     * 경계 초과, 몬스터 차단, 아이템 획득, 문 이동 등을 처리한다.
+     * @return 이동이 처리되었으면 true (실패한 경우도 포함)
      */
     private boolean tryMove(int dr, int dc) {
         int newRow = mapGrid.getHeroRow() + dr;
         int newCol = mapGrid.getHeroCol() + dc;
 
         if (!mapGrid.isInBounds(newRow, newCol)) {
-            System.out.println("You can't move there – it's a wall.");
+            System.out.println("You can't move there - it's a wall.");
             return false;
         }
 
         GameObject target = mapGrid.getCell(newRow, newCol);
 
-        // --- Blocked by monster ---
+        // 몬스터가 길을 막고 있는 경우
         if (target instanceof Monster) {
             System.out.println("A " + ((Monster) target).getName()
-                    + " is blocking the way. Use 'a' to attack.");
+                    + " is blocking the way.");
             return false;
         }
 
-        // --- Door ---
+        // 문 처리
         if (target instanceof Door) {
             return handleDoor((Door) target, newRow, newCol);
         }
 
-        // --- Move hero ---
+        // 영웅 이동
         int prevRow = mapGrid.getHeroRow();
         int prevCol = mapGrid.getHeroCol();
         mapGrid.moveHero(newRow, newCol);
         mapGrid.setCell(newRow, newCol, hero);
-        // Restore any item that was under the hero when they step away
+
+        // 영웅이 떠난 칸에 임시 저장된 아이템 복원
         if (pendingPotion != null) {
             mapGrid.setCell(prevRow, prevCol, pendingPotion);
             pendingPotion = null;
@@ -309,7 +304,7 @@ public class GameEngine {
             pendingWeapon = null;
         }
 
-        // --- Interact with what was on the cell ---
+        // 이동한 칸의 아이템 상호작용
         if (target instanceof Weapon) {
             handleWeaponPickup((Weapon) target, prevRow, prevCol);
         } else if (target instanceof Potion) {
@@ -322,14 +317,13 @@ public class GameEngine {
         return true;
     }
 
-    // ── Door logic ────────────────────────────────────────────────────────────
+    // ── 문 처리 ───────────────────────────────────────────────────────────────
 
     private boolean handleDoor(Door door, int doorRow, int doorCol) {
         if (door.isMaster()) {
             if (hero.hasKey()) {
                 System.out.println("You use the Master Key to open the door and escape the maze!");
                 System.out.println("*** YOU WIN! ***");
-                // Save state before exit
                 trySaveRoom();
                 System.exit(0);
             } else {
@@ -338,7 +332,7 @@ public class GameEngine {
             }
         }
 
-        // Regular door – save current room then load the next one
+        // 일반 문 — 현재 방 저장 후 다음 방 로드
         trySaveRoom();
         String targetFile = door.getTargetFilename();
         System.out.println("Moving to " + targetFile + "...");
@@ -348,7 +342,7 @@ public class GameEngine {
         } catch (GameException e) {
             System.out.println("[Error] Could not load room '" + targetFile + "': "
                     + e.getMessage());
-            // Reload current room so the game can continue
+            // 현재 방을 다시 로드하여 게임 계속 진행
             try {
                 loadRoom(currentFilename, -1, -1);
             } catch (GameException ex) {
@@ -368,33 +362,32 @@ public class GameEngine {
         }
     }
 
-    // ── Item interactions ─────────────────────────────────────────────────────
+    // ── 아이템 상호작용 ───────────────────────────────────────────────────────
 
     /**
-     * Handles stepping onto a weapon cell.
-     * The hero already occupies (heroRow, heroCol); the cell the hero came
-     * FROM is (prevRow, prevCol) and is now empty — that is where we drop
-     * any weapon that should remain on the floor.
+     * 무기 칸으로 이동했을 때 처리한다.
+     * 영웅은 이미 현재 칸(heroRow, heroCol)에 있다.
+     * 바닥에 남겨야 할 무기는 이전 칸(prevRow, prevCol)에 pendingWeapon으로 저장한다.
      */
     private void handleWeaponPickup(Weapon newWeapon, int prevRow, int prevCol) {
         if (!hero.isArmed()) {
-            // Simply equip – hero cell already holds the hero object, nothing to change
+            // 무기 없음 → 자동 장착
             hero.equipWeapon(newWeapon);
             System.out.println("You picked up a " + newWeapon.getName() + ".");
         } else {
-            // Already armed – prompt to switch
+            // 이미 무장 → 교체 여부 확인
             System.out.println("You already have a " + hero.getCurrentWeapon().getName()
                     + ". Switch to " + newWeapon.getName() + "? (y/n): ");
             String choice = scanner.nextLine().trim().toLowerCase();
             if (choice.equals("y")) {
                 Weapon old = hero.getCurrentWeapon();
                 hero.equipWeapon(newWeapon);
-                // Drop old weapon onto the cell the hero just vacated
+                // 기존 무기를 영웅이 떠난 칸에 드롭
                 mapGrid.setCell(prevRow, prevCol, old);
                 System.out.println("Switched to " + newWeapon.getName()
                         + ". Dropped " + old.getName() + ".");
             } else {
-                // Keep current weapon; store new weapon so it reappears when hero leaves
+                // 교체 거절 → 새 무기를 pendingWeapon에 저장 (영웅이 떠나면 복원)
                 pendingWeapon = newWeapon;
                 System.out.println("Kept " + hero.getCurrentWeapon().getName() + ".");
             }
@@ -403,7 +396,7 @@ public class GameEngine {
 
     private void handlePotionPickup(Potion potion) {
         if (hero.isFullHp()) {
-            // Hero is on this cell; store the potion so we can put it back when hero leaves
+            // HP가 꽉 찬 경우 → pendingPotion에 저장 (영웅이 떠나면 복원)
             pendingPotion = potion;
             System.out.println("You are already at full HP. The potion stays under you.");
         } else {
@@ -414,20 +407,4 @@ public class GameEngine {
                     + hero.getHp() + "/" + hero.getMaxHp());
         }
     }
-
-    // ── Combat ────────────────────────────────────────────────────────────────
-
-
-    /**
-     * Handles the 'a' command.
-     * If only one monster is adjacent, attacks it immediately.
-     * If multiple are adjacent, prompts the player to choose which to attack.
-     */
-
-    /**
-     * Single-monster attack sequence:
-     *  - Shows action menu (attack / skip)
-     *  - On attack: simultaneous damage exchange
-     *  - Removes monster if dead; drops key if Troll
-     */
 }

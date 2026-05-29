@@ -1,6 +1,6 @@
 package mazegame.item;
 
-/** Strong Sword: symbol X, damage 3. */
+/** 강한 검: 기호 X, 데미지 3. */
 public class StrongSword extends Weapon {
     public StrongSword() { super(3); }
 

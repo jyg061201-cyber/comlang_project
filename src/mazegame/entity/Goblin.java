@@ -1,7 +1,7 @@
 package mazegame.entity;
 
 /**
- * Goblin: HP 3, Damage 1, symbol G.
+ * 고블린: HP 3, 데미지 1, 기호 G.
  */
 public class Goblin extends Monster {
 
@@ -10,9 +10,8 @@ public class Goblin extends Monster {
     }
 
     /**
-     * Constructor that allows restoring a goblin with a specific HP value
-     * (used when loading a saved room state from CSV).
-     * @param hp current hit points read from the CSV cell
+     * CSV에서 저장된 HP 값으로 고블린을 복원할 때 사용하는 생성자.
+     * @param hp CSV 셀에서 읽어온 현재 체력
      */
     public Goblin(int hp) {
         super(3, 1, "G");

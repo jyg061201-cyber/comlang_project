@@ -1,7 +1,7 @@
 package mazegame.entity;
 
 /**
- * Orc: HP 8, Damage 3, symbol O.
+ * 오크: HP 8, 데미지 3, 기호 O.
  */
 public class Orc extends Monster {
 
@@ -10,7 +10,7 @@ public class Orc extends Monster {
     }
 
     /**
-     * Constructor for restoring from a saved CSV state.
+     * CSV에서 저장된 HP 값으로 오크를 복원할 때 사용하는 생성자.
      */
     public Orc(int hp) {
         super(8, 3, "O");

@@ -1,6 +1,6 @@
 package mazegame.item;
 
-/** Stick: symbol S, damage 1. */
+/** 막대기: 기호 S, 데미지 1. */
 public class Stick extends Weapon {
     public Stick() { super(1); }
 

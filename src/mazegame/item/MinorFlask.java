@@ -1,6 +1,6 @@
 package mazegame.item;
 
-/** Minor Flask: symbol m, restores 6 HP. */
+/** 소형 물약: 기호 m, HP 6 회복. */
 public class MinorFlask extends Potion {
     public MinorFlask() { super(6); }
 
