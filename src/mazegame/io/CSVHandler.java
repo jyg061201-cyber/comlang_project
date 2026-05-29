@@ -21,7 +21,7 @@ import java.util.List;
 public class CSVHandler {
 
     /** 원본 CSV 방 파일이 있는 폴더 (작업 디렉터리 기준 상대 경로). */
-    private static final String DATA_DIR = "data";
+    private static final String DATA_DIR = "rooms";
 
     /** 게임 시작 시 생성되는 실행별 저장 서브폴더. */
     private String saveDir;
